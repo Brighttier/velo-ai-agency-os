@@ -1,0 +1,30 @@
+# Firebase and Google Cloud
+firebase-functions==0.4.0
+firebase-admin==6.5.0
+google-cloud-aiplatform>=1.50.0
+google-cloud-storage>=2.14.0
+cloud-sql-python-connector[asyncpg]
+
+# Genkit for Firebase
+genkit==0.4.0
+
+# LangGraph and LangChain
+langgraph>=0.2.0
+langchain>=0.2.0
+langchain-google-vertexai>=1.0.0
+
+# Database
+asyncpg
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.31
+
+# API and Web
+fastapi>=0.110.0
+uvicorn>=0.30.0
+pydantic>=2.7.0
+httpx>=0.28.1
+
+# Utilities
+python-dotenv==1.0.1
+pyyaml==6.0.2
+tenacity==8.5.0

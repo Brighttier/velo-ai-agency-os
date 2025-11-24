@@ -1,0 +1,21 @@
+{
+  "name": "velo-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Velo - The AI Agency OS",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "pnpm --filter frontend dev",
+    "dev:backend": "cd backend && python main.py",
+    "build": "pnpm --filter frontend build",
+    "lint": "pnpm --filter frontend lint",
+    "typecheck": "pnpm --filter frontend typecheck"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

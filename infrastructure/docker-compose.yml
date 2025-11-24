@@ -1,0 +1,100 @@
+# Docker Compose for Plane.so (Community Edition)
+# This will be deployed on Google Cloud Compute Engine
+
+version: '3.8'
+
+services:
+  plane-web:
+    image: makeplane/plane-frontend:latest
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://plane-api:8000
+      - NEXT_PUBLIC_DEPLOY_URL=http://your-plane-instance.com
+    depends_on:
+      - plane-api
+
+  plane-api:
+    image: makeplane/plane-backend:latest
+    restart: always
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql://plane:plane@plane-db:5432/plane
+      - REDIS_URL=redis://plane-redis:6379/
+      - SECRET_KEY=${PLANE_SECRET_KEY}
+      - DEBUG=0
+      - ALLOWED_HOSTS=*
+    depends_on:
+      - plane-db
+      - plane-redis
+    volumes:
+      - plane-logs:/code/plane/logs
+
+  plane-worker:
+    image: makeplane/plane-backend:latest
+    restart: always
+    command: ./bin/worker
+    environment:
+      - DATABASE_URL=postgresql://plane:plane@plane-db:5432/plane
+      - REDIS_URL=redis://plane-redis:6379/
+      - SECRET_KEY=${PLANE_SECRET_KEY}
+    depends_on:
+      - plane-api
+      - plane-db
+      - plane-redis
+
+  plane-beat-worker:
+    image: makeplane/plane-backend:latest
+    restart: always
+    command: ./bin/beat
+    environment:
+      - DATABASE_URL=postgresql://plane:plane@plane-db:5432/plane
+      - REDIS_URL=redis://plane-redis:6379/
+      - SECRET_KEY=${PLANE_SECRET_KEY}
+    depends_on:
+      - plane-api
+      - plane-db
+      - plane-redis
+
+  plane-db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=plane
+      - POSTGRES_PASSWORD=plane
+      - POSTGRES_DB=plane
+    volumes:
+      - plane-db-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  plane-redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - plane-redis-data:/data
+
+  plane-minio:
+    image: minio/minio:latest
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-plane}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-planeplane}
+    volumes:
+      - plane-minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+volumes:
+  plane-db-data:
+  plane-redis-data:
+  plane-minio-data:
+  plane-logs:
+
+networks:
+  default:
+    name: plane-network

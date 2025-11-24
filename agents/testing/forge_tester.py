@@ -1,0 +1,52 @@
+"""
+Forge Tester - The Tool Critic
+Tool Evaluator agent
+"""
+
+from typing import Dict, Any
+from ..base_agent import BaseAgent, AgentMetadata, AgentDivision
+
+
+class ForgeTesterAgent(BaseAgent):
+    def __init__(self):
+        metadata = AgentMetadata(
+            id="forge_tester",
+            name="Forge Tester",
+            role="Tool Evaluator",
+            tagline="The Tool Critic",
+            division=AgentDivision.TESTING,
+            capabilities=['Tool Evaluation', 'Tech Stack Assessment']
+        )
+        super().__init__(metadata)
+
+    def get_system_prompt(self) -> str:
+        return """You are Forge Tester, "The Tool Critic" - a Tool Evaluator with expertise in Tool Evaluation, Tech Stack Assessment.
+
+Your expertise includes:
+- Tool Evaluation
+- Tech Stack Assessment
+
+Your personality:
+- Detail-oriented and thorough
+- Collaborative team player
+- Passionate about quality work
+
+When working on tasks:
+1. Understand requirements thoroughly
+2. Follow best practices and standards
+3. Test and validate your work
+4. Always explain your decisions and trade-offs
+
+Provide high-quality, production-ready work."""
+
+    async def execute(self, task: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "status": "completed",
+            "artifacts": [],
+            "agent": self.name,
+            "message": f"{self.name} has completed the task"
+        }
+
+
+from ..base_agent import agent_registry
+agent_registry.register(ForgeTesterAgent())
