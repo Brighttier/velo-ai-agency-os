@@ -1,0 +1,461 @@
+[
+  {
+    "id": "pixel",
+    "name": "Pixel",
+    "role": "Frontend Developer",
+    "tagline": "The UI Craftsman",
+    "division": "engineering",
+    "status": "idle",
+    "capabilities": ["React", "Next.js", "TypeScript", "Tailwind CSS", "UI/UX Implementation"]
+  },
+  {
+    "id": "atlas",
+    "name": "Atlas",
+    "role": "Backend Architect",
+    "tagline": "The Infrastructure Oracle",
+    "division": "engineering",
+    "status": "idle",
+    "capabilities": ["System Design", "API Architecture", "Database Design", "Microservices"]
+  },
+  {
+    "id": "nova",
+    "name": "Nova",
+    "role": "Mobile App Builder",
+    "tagline": "The Cross-Platform Pioneer",
+    "division": "engineering",
+    "status": "idle",
+    "capabilities": ["React Native", "iOS", "Android", "Mobile UX"]
+  },
+  {
+    "id": "neuron",
+    "name": "Neuron",
+    "role": "AI Engineer",
+    "tagline": "The Neural Network Whisperer",
+    "division": "engineering",
+    "status": "idle",
+    "capabilities": ["Machine Learning", "LLMs", "Vector Databases", "AI Integration"]
+  },
+  {
+    "id": "forge",
+    "name": "Forge",
+    "role": "DevOps Automator",
+    "tagline": "The Pipeline Architect",
+    "division": "engineering",
+    "status": "idle",
+    "capabilities": ["CI/CD", "Docker", "Kubernetes", "Cloud Infrastructure", "Automation"]
+  },
+  {
+    "id": "blitz",
+    "name": "Blitz",
+    "role": "Rapid Prototyper",
+    "tagline": "The Speed Demon",
+    "division": "engineering",
+    "status": "idle",
+    "capabilities": ["MVP Development", "Quick Iterations", "Proof of Concept"]
+  },
+  {
+    "id": "sage",
+    "name": "Sage",
+    "role": "Senior Developer",
+    "tagline": "The Code Philosopher",
+    "division": "engineering",
+    "status": "idle",
+    "capabilities": ["Code Review", "Best Practices", "Mentorship", "Architecture Decisions"]
+  },
+  {
+    "id": "aurora",
+    "name": "Aurora",
+    "role": "UI Designer",
+    "tagline": "The Visual Alchemist",
+    "division": "design",
+    "status": "idle",
+    "capabilities": ["Visual Design", "Design Systems", "Figma", "Prototyping"]
+  },
+  {
+    "id": "echo",
+    "name": "Echo",
+    "role": "UX Researcher",
+    "tagline": "The User Advocate",
+    "division": "design",
+    "status": "idle",
+    "capabilities": ["User Research", "Usability Testing", "Persona Development"]
+  },
+  {
+    "id": "compass",
+    "name": "Compass",
+    "role": "UX Architect",
+    "tagline": "The Experience Navigator",
+    "division": "design",
+    "status": "idle",
+    "capabilities": ["Information Architecture", "User Flows", "Journey Mapping"]
+  },
+  {
+    "id": "ember",
+    "name": "Ember",
+    "role": "Brand Guardian",
+    "tagline": "The Identity Keeper",
+    "division": "design",
+    "status": "idle",
+    "capabilities": ["Brand Strategy", "Visual Identity", "Brand Guidelines"]
+  },
+  {
+    "id": "canvas",
+    "name": "Canvas",
+    "role": "Visual Storyteller",
+    "tagline": "The Design Narrator",
+    "division": "design",
+    "status": "idle",
+    "capabilities": ["Illustration", "Iconography", "Visual Communication"]
+  },
+  {
+    "id": "spark",
+    "name": "Spark",
+    "role": "Whimsy Injector",
+    "tagline": "The Delight Designer",
+    "division": "design",
+    "status": "idle",
+    "capabilities": ["Micro-interactions", "Animations", "Delightful UX"]
+  },
+  {
+    "id": "rocket",
+    "name": "Rocket",
+    "role": "Growth Hacker",
+    "tagline": "The Viral Catalyst",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["Growth Strategy", "A/B Testing", "Viral Marketing", "Analytics"]
+  },
+  {
+    "id": "quill",
+    "name": "Quill",
+    "role": "Content Creator",
+    "tagline": "The Story Weaver",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["Copywriting", "Content Strategy", "Storytelling", "SEO"]
+  },
+  {
+    "id": "chirp",
+    "name": "Chirp",
+    "role": "Twitter Engager",
+    "tagline": "The Tweet Maestro",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["Twitter Strategy", "Community Engagement", "Viral Tweets"]
+  },
+  {
+    "id": "rhythm",
+    "name": "Rhythm",
+    "role": "TikTok Strategist",
+    "tagline": "The Trend Rider",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["Short-form Video", "TikTok Trends", "Viral Content"]
+  },
+  {
+    "id": "prism",
+    "name": "Prism",
+    "role": "Instagram Curator",
+    "tagline": "The Visual Curator",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["Instagram Strategy", "Visual Content", "Community Building"]
+  },
+  {
+    "id": "pulse",
+    "name": "Pulse",
+    "role": "Reddit Community Builder",
+    "tagline": "The Community Architect",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["Reddit Strategy", "Community Management", "Authentic Engagement"]
+  },
+  {
+    "id": "phoenix",
+    "name": "Phoenix",
+    "role": "App Store Optimizer",
+    "tagline": "The Ranking Wizard",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["ASO", "App Marketing", "Conversion Optimization"]
+  },
+  {
+    "id": "nexus",
+    "name": "Nexus",
+    "role": "Social Media Strategist",
+    "tagline": "The Cross-Channel Conductor",
+    "division": "marketing",
+    "status": "idle",
+    "capabilities": ["Multi-channel Strategy", "Campaign Management", "Social Analytics"]
+  },
+  {
+    "id": "sprint",
+    "name": "Sprint",
+    "role": "Sprint Prioritizer",
+    "tagline": "The Backlog Master",
+    "division": "product",
+    "status": "idle",
+    "capabilities": ["Prioritization", "Roadmap Planning", "Sprint Planning"]
+  },
+  {
+    "id": "horizon",
+    "name": "Horizon",
+    "role": "Trend Researcher",
+    "tagline": "The Future Scout",
+    "division": "product",
+    "status": "idle",
+    "capabilities": ["Market Research", "Trend Analysis", "Competitive Intelligence"]
+  },
+  {
+    "id": "synthesis",
+    "name": "Synthesis",
+    "role": "Feedback Synthesizer",
+    "tagline": "The Voice of Users",
+    "division": "product",
+    "status": "idle",
+    "capabilities": ["User Feedback", "Data Analysis", "Insight Generation"]
+  },
+  {
+    "id": "maestro",
+    "name": "Maestro",
+    "role": "Studio Producer",
+    "tagline": "The Creative Director",
+    "division": "project_management",
+    "status": "idle",
+    "capabilities": ["Creative Direction", "Resource Management", "Vision Alignment"]
+  },
+  {
+    "id": "shepherd",
+    "name": "Shepherd",
+    "role": "Project Shepherd",
+    "tagline": "The Deadline Guardian",
+    "division": "project_management",
+    "status": "idle",
+    "capabilities": ["Timeline Management", "Risk Mitigation", "Stakeholder Communication"]
+  },
+  {
+    "id": "clockwork",
+    "name": "Clockwork",
+    "role": "Studio Operations",
+    "tagline": "The Efficiency Engine",
+    "division": "project_management",
+    "status": "idle",
+    "capabilities": ["Process Optimization", "Workflow Automation", "Operations"]
+  },
+  {
+    "id": "prism_lab",
+    "name": "Prism Lab",
+    "role": "Experiment Tracker",
+    "tagline": "The Innovation Keeper",
+    "division": "project_management",
+    "status": "idle",
+    "capabilities": ["Experiment Design", "Metrics Tracking", "Learning Documentation"]
+  },
+  {
+    "id": "oracle",
+    "name": "Oracle",
+    "role": "Senior Project Manager",
+    "tagline": "The Strategic Planner",
+    "division": "project_management",
+    "status": "idle",
+    "capabilities": ["Strategic Planning", "Program Management", "Executive Communication"]
+  },
+  {
+    "id": "sherlock",
+    "name": "Sherlock",
+    "role": "Evidence Collector",
+    "tagline": "The Bug Detective",
+    "division": "testing",
+    "status": "idle",
+    "capabilities": ["Bug Hunting", "Test Case Design", "Quality Investigation"]
+  },
+  {
+    "id": "gatekeeper",
+    "name": "Gatekeeper",
+    "role": "Reality Checker",
+    "tagline": "The Quality Guardian",
+    "division": "testing",
+    "status": "idle",
+    "capabilities": ["Code Review", "Quality Assurance", "Standards Enforcement"]
+  },
+  {
+    "id": "verdict",
+    "name": "Verdict",
+    "role": "Test Results Analyzer",
+    "tagline": "The Results Interpreter",
+    "division": "testing",
+    "status": "idle",
+    "capabilities": ["Test Analysis", "Reporting", "Metrics Interpretation"]
+  },
+  {
+    "id": "benchmark",
+    "name": "Benchmark",
+    "role": "Performance Benchmarker",
+    "tagline": "The Speed Auditor",
+    "division": "testing",
+    "status": "idle",
+    "capabilities": ["Performance Testing", "Load Testing", "Optimization"]
+  },
+  {
+    "id": "postman",
+    "name": "Postman",
+    "role": "API Tester",
+    "tagline": "The Endpoint Validator",
+    "division": "testing",
+    "status": "idle",
+    "capabilities": ["API Testing", "Integration Testing", "Contract Testing"]
+  },
+  {
+    "id": "forge_tester",
+    "name": "Forge Tester",
+    "role": "Tool Evaluator",
+    "tagline": "The Tool Critic",
+    "division": "testing",
+    "status": "idle",
+    "capabilities": ["Tool Evaluation", "Tech Stack Assessment", "Best Practices"]
+  },
+  {
+    "id": "flow",
+    "name": "Flow",
+    "role": "Workflow Optimizer",
+    "tagline": "The Process Perfectionist",
+    "division": "testing",
+    "status": "idle",
+    "capabilities": ["Workflow Analysis", "Process Improvement", "Efficiency Optimization"]
+  },
+  {
+    "id": "beacon",
+    "name": "Beacon",
+    "role": "Support Responder",
+    "tagline": "The Help Hero",
+    "division": "support",
+    "status": "idle",
+    "capabilities": ["Customer Support", "Documentation", "Issue Resolution"]
+  },
+  {
+    "id": "insight",
+    "name": "Insight",
+    "role": "Analytics Reporter",
+    "tagline": "The Data Storyteller",
+    "division": "support",
+    "status": "idle",
+    "capabilities": ["Data Analysis", "Reporting", "Business Intelligence"]
+  },
+  {
+    "id": "ledger",
+    "name": "Ledger",
+    "role": "Finance Tracker",
+    "tagline": "The Budget Keeper",
+    "division": "support",
+    "status": "idle",
+    "capabilities": ["Budget Management", "Financial Reporting", "Cost Optimization"]
+  },
+  {
+    "id": "sentinel",
+    "name": "Sentinel",
+    "role": "Infrastructure Maintainer",
+    "tagline": "The System Watchdog",
+    "division": "support",
+    "status": "idle",
+    "capabilities": ["Monitoring", "Infrastructure Health", "Incident Response"]
+  },
+  {
+    "id": "shield",
+    "name": "Shield",
+    "role": "Legal Compliance Checker",
+    "tagline": "The Compliance Guardian",
+    "division": "support",
+    "status": "idle",
+    "capabilities": ["Compliance", "Security", "Privacy", "Legal Review"]
+  },
+  {
+    "id": "summit",
+    "name": "Summit",
+    "role": "Executive Summary Generator",
+    "tagline": "The C-Suite Translator",
+    "division": "support",
+    "status": "idle",
+    "capabilities": ["Executive Communication", "Summary Generation", "Strategic Reporting"]
+  },
+  {
+    "id": "hologram",
+    "name": "Hologram",
+    "role": "XR Interface Architect",
+    "tagline": "The Reality Designer",
+    "division": "spatial_computing",
+    "status": "idle",
+    "capabilities": ["XR Design", "3D Interfaces", "Spatial UX"]
+  },
+  {
+    "id": "titanium",
+    "name": "Titanium",
+    "role": "macOS Spatial/Metal Engineer",
+    "tagline": "The Apple Silicon Master",
+    "division": "spatial_computing",
+    "status": "idle",
+    "capabilities": ["Metal", "macOS Development", "Performance Optimization"]
+  },
+  {
+    "id": "immerse",
+    "name": "Immerse",
+    "role": "XR Immersive Developer",
+    "tagline": "The Presence Creator",
+    "division": "spatial_computing",
+    "status": "idle",
+    "capabilities": ["VR Development", "Immersive Experiences", "Unity/Unreal"]
+  },
+  {
+    "id": "gesture",
+    "name": "Gesture",
+    "role": "XR Cockpit Interaction Specialist",
+    "tagline": "The Hand Interface Expert",
+    "division": "spatial_computing",
+    "status": "idle",
+    "capabilities": ["Hand Tracking", "Gesture Recognition", "Natural Interactions"]
+  },
+  {
+    "id": "vision",
+    "name": "Vision",
+    "role": "visionOS Spatial Engineer",
+    "tagline": "The Spatial Computing Pioneer",
+    "division": "spatial_computing",
+    "status": "idle",
+    "capabilities": ["visionOS", "Spatial Computing", "Apple Vision Pro"]
+  },
+  {
+    "id": "terminal",
+    "name": "Terminal",
+    "role": "Terminal Integration Specialist",
+    "tagline": "The CLI Commander",
+    "division": "spatial_computing",
+    "status": "idle",
+    "capabilities": ["CLI Tools", "Terminal UX", "Developer Tools"]
+  },
+  {
+    "id": "conductor",
+    "name": "Conductor",
+    "role": "Agents Orchestrator",
+    "tagline": "The Team Coordinator",
+    "division": "specialized",
+    "status": "idle",
+    "capabilities": ["Agent Coordination", "Workflow Orchestration", "Task Distribution"]
+  },
+  {
+    "id": "prism_analytics",
+    "name": "Prism Analytics",
+    "role": "Data Analytics Reporter",
+    "tagline": "The Metrics Storyteller",
+    "division": "specialized",
+    "status": "idle",
+    "capabilities": ["Advanced Analytics", "Data Visualization", "Predictive Analysis"]
+  },
+  {
+    "id": "index",
+    "name": "Index",
+    "role": "LSP/Index Engineer",
+    "tagline": "The Code Intelligence Architect",
+    "division": "specialized",
+    "status": "idle",
+    "capabilities": ["Language Servers", "Code Analysis", "IDE Integration"]
+  }
+]
