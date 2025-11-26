@@ -196,14 +196,26 @@ async def run_planning_phase(project_id: str, project_name: str, description: st
     Simulate the Planning Phase workflow with real-time progress updates
     In production, this would call the LangGraph Planning workflow
     """
-    # No initialization needed - Firestore handles creation dynamically
+    # Step 1: Detect project type
+    gemini_client = get_gemini_client()
+    try:
+        project_type = await gemini_client.detect_project_type(project_name, description)
+        print(f"🎯 Detected project type: {project_type}")
+    except Exception as e:
+        print(f"⚠️ Project type detection failed: {e}")
+        project_type = 'software'  # Default fallback
 
+    # Store project type in database
+    db.update_project(project_id, {"project_type": project_type})
+
+    # Get appropriate agents for this project type
+    agents_workflow = get_agents_for_project_type(project_type)
+
+    # Dynamic steps based on project type
     steps = [
         {"agent": "Oracle", "action": "Analyzing project requirements", "duration": 2},
-        {"agent": "Oracle", "action": "Generating comprehensive PRD", "duration": 3},
-        {"agent": "Neuron", "action": "Breaking down features into tasks", "duration": 2},
-        {"agent": "Atlas", "action": "Creating Plane project workspace", "duration": 1},
-        {"agent": "Atlas", "action": "Syncing tasks to Plane", "duration": 2},
+        {"agent": "Oracle", "action": f"Generating comprehensive {project_type.title()} PRD", "duration": 3},
+        {"agent": agents_workflow[1]["agent"] if len(agents_workflow) > 1 else "Neuron", "action": "Breaking down into actionable tasks", "duration": 2},
     ]
 
     for i, step in enumerate(steps):
@@ -295,8 +307,8 @@ This document outlines the requirements and plan for: {project_name}
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-        # If this is the Neuron step, create tasks
-        if step["agent"] == "Neuron":
+        # If this is the task breakdown step, create tasks
+        if "Breaking down" in step["action"]:
             # Generate task breakdown using Gemini AI
             try:
                 gemini_client = get_gemini_client()
@@ -322,49 +334,85 @@ This document outlines the requirements and plan for: {project_name}
                     "timestamp": datetime.utcnow().isoformat()
                 })
 
-                # Context-aware fallback tasks based on project description
-                sample_tasks = [
-                    {
-                        "title": f"Research and Planning for {project_name}",
-                        "description": f"Conduct thorough research and create detailed plan for: {description}",
-                        "assigned_agent": "Oracle",
-                        "priority": "high",
-                        "dependencies": [],
-                        "estimated_hours": 8
-                    },
-                    {
-                        "title": f"Strategy Development",
-                        "description": f"Develop comprehensive strategy and approach for implementing: {project_name}",
-                        "assigned_agent": "Neuron",
-                        "priority": "high",
-                        "dependencies": [f"Research and Planning for {project_name}"],
-                        "estimated_hours": 12
-                    },
-                    {
-                        "title": f"Core Implementation",
-                        "description": f"Execute main implementation work for: {description}",
-                        "assigned_agent": "Atlas",
-                        "priority": "high",
-                        "dependencies": ["Strategy Development"],
-                        "estimated_hours": 16
-                    },
-                    {
-                        "title": f"Quality Assurance and Testing",
-                        "description": f"Review, test and validate all deliverables for {project_name}",
-                        "assigned_agent": "Judge",
-                        "priority": "medium",
-                        "dependencies": ["Core Implementation"],
-                        "estimated_hours": 8
-                    },
-                    {
-                        "title": f"Launch and Deployment",
-                        "description": f"Finalize and deploy {project_name} to production",
-                        "assigned_agent": "Forge",
-                        "priority": "medium",
-                        "dependencies": ["Quality Assurance and Testing"],
-                        "estimated_hours": 6
-                    }
-                ]
+                # Context-aware fallback tasks based on project type
+                if project_type == 'marketing':
+                    sample_tasks = [
+                        {
+                            "title": f"Campaign Strategy for {project_name}",
+                            "description": f"Develop comprehensive marketing strategy for: {description}",
+                            "assigned_agent": "Nexus",
+                            "priority": "high",
+                            "dependencies": [],
+                            "estimated_hours": 8
+                        },
+                        {
+                            "title": f"TikTok Content Creation",
+                            "description": f"Create viral TikTok content strategy and scripts",
+                            "assigned_agent": "Rhythm",
+                            "priority": "high",
+                            "dependencies": [f"Campaign Strategy for {project_name}"],
+                            "estimated_hours": 12
+                        },
+                        {
+                            "title": f"Instagram Content Creation",
+                            "description": f"Develop Instagram visual content and posting schedule",
+                            "assigned_agent": "Prism",
+                            "priority": "high",
+                            "dependencies": [f"Campaign Strategy for {project_name}"],
+                            "estimated_hours": 10
+                        },
+                        {
+                            "title": f"Copywriting and Captions",
+                            "description": f"Write compelling copy and captions for all platforms",
+                            "assigned_agent": "Quill",
+                            "priority": "medium",
+                            "dependencies": ["TikTok Content Creation", "Instagram Content Creation"],
+                            "estimated_hours": 8
+                        },
+                        {
+                            "title": f"Growth & Optimization",
+                            "description": f"Implement growth tactics and A/B testing",
+                            "assigned_agent": "Rocket",
+                            "priority": "medium",
+                            "dependencies": ["Copywriting and Captions"],
+                            "estimated_hours": 6
+                        }
+                    ]
+                else:  # software (default)
+                    sample_tasks = [
+                        {
+                            "title": f"Research and Planning for {project_name}",
+                            "description": f"Conduct thorough research and create detailed plan for: {description}",
+                            "assigned_agent": agents_workflow[0]["agent"],
+                            "priority": "high",
+                            "dependencies": [],
+                            "estimated_hours": 8
+                        },
+                        {
+                            "title": f"Strategy Development",
+                            "description": f"Develop comprehensive strategy and approach for implementing: {project_name}",
+                            "assigned_agent": agents_workflow[1]["agent"] if len(agents_workflow) > 1 else "Neuron",
+                            "priority": "high",
+                            "dependencies": [f"Research and Planning for {project_name}"],
+                            "estimated_hours": 12
+                        },
+                        {
+                            "title": f"Core Implementation",
+                            "description": f"Execute main implementation work for: {description}",
+                            "assigned_agent": agents_workflow[2]["agent"] if len(agents_workflow) > 2 else "Atlas",
+                            "priority": "high",
+                            "dependencies": ["Strategy Development"],
+                            "estimated_hours": 16
+                        },
+                        {
+                            "title": f"Quality Assurance",
+                            "description": f"Review, test and validate all deliverables for {project_name}",
+                            "assigned_agent": agents_workflow[3]["agent"] if len(agents_workflow) > 3 else "Judge",
+                            "priority": "medium",
+                            "dependencies": ["Core Implementation"],
+                            "estimated_hours": 8
+                        }
+                    ]
 
             for task_data in sample_tasks:
                 task_create_data = {
@@ -474,20 +522,27 @@ async def run_task_execution(task_id: str, project_id: str, task: Dict[str, Any]
     })
     await asyncio.sleep(2)
 
-    # Generate code output using Gemini AI
+    # Get project type for context-aware content generation
+    project = db.get_project(project_id)
+    project_type = project.get("project_type", "software") if project else "software"
+    project_name = project.get("name", "Project") if project else "Project"
+
+    # Generate content output using Gemini AI (project-aware)
     try:
         gemini_client = get_gemini_client()
-        code_output = await gemini_client.generate_code(
+        code_output = await gemini_client.generate_content_for_task(
             task_title=task_title,
             task_description=task.get("description", ""),
             agent_name=agent_name.lower(),
+            project_type=project_type,
+            project_context=f"{project_name}: {project.get('description', '')}" if project else "",
             context={
                 "project_id": project_id,
                 "task_id": task_id
             }
         )
     except Exception as e:
-        error_msg = f"Gemini AI code generation failed: {str(e)}"
+        error_msg = f"Gemini AI content generation failed: {str(e)}"
         print(f"⚠️ {error_msg}")
 
         # Broadcast error to frontend
@@ -495,7 +550,7 @@ async def run_task_execution(task_id: str, project_id: str, task: Dict[str, Any]
             "type": "ai_generation_warning",
             "project_id": project_id,
             "task_id": task_id,
-            "message": "AI code generation unavailable. Using template output.",
+            "message": f"AI {project_type} content generation unavailable. Using template output.",
             "details": str(e)[:200],
             "timestamp": datetime.utcnow().isoformat()
         })
