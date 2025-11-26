@@ -26,10 +26,31 @@ class GeminiAIClient:
             model_name: Model to use (gemini-1.5-pro, gemini-1.5-flash, gemini-2.0-flash-exp)
         """
         self.model_name = model_name
+        self.model = None
+
         if API_KEY:
-            self.model = genai.GenerativeModel(model_name)
-        else:
-            self.model = None
+            # Try to initialize with fallback models (use actual available models)
+            models_to_try = [
+                "gemini-2.5-flash",       # Latest fast model
+                "gemini-2.0-flash",       # Stable fast model
+                "gemini-2.5-pro",         # Most capable
+                "gemini-pro-latest",      # Latest pro
+                "gemini-flash-latest"     # Latest flash
+            ]
+
+            for model_attempt in models_to_try:
+                try:
+                    self.model = genai.GenerativeModel(model_attempt)
+                    self.model_name = model_attempt
+                    print(f"✅ Gemini AI initialized with model: {model_attempt}")
+                    break
+                except Exception as e:
+                    print(f"⚠️ Failed to initialize {model_attempt}: {str(e)[:100]}")
+                    continue
+
+            if not self.model:
+                print("❌ Failed to initialize any Gemini model")
+                print("💡 Get API key at: https://aistudio.google.com/app/apikey")
 
     async def detect_project_type(self, project_name: str, project_description: str) -> str:
         """
@@ -48,9 +69,10 @@ class GeminiAIClient:
 
             # Marketing keywords
             if any(keyword in desc_lower for keyword in [
-                'marketing', 'campaign', 'social media', 'tiktok', 'instagram',
+                'marketing', 'campaign', 'social media', 'tiktok', 'tik tok', 'instagram',
                 'facebook', 'twitter', 'ad', 'promotion', 'viral', 'influencer',
-                'seo', 'content marketing', 'email marketing', 'growth'
+                'seo', 'content marketing', 'email marketing', 'growth', 'social',
+                'youtube', 'linkedin', 'pinterest', 'snapchat', 'brand awareness'
             ]):
                 return 'marketing'
 
