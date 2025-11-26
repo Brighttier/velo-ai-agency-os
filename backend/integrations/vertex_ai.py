@@ -18,7 +18,7 @@ vertexai.init(project=PROJECT_ID, location=LOCATION)
 class VertexAIClient:
     """Client for interacting with Vertex AI Gemini models"""
 
-    def __init__(self, model_name: str = "gemini-1.5-pro"):
+    def __init__(self, model_name: str = "gemini-1.5-flash"):
         """
         Initialize Vertex AI client
 
@@ -351,7 +351,7 @@ Provide complete, production-ready code with comments."""
 # Singleton instance
 _vertex_client = None
 
-def get_vertex_client(model_name: str = "gemini-1.5-pro") -> VertexAIClient:
+def get_vertex_client(model_name: str = "gemini-1.5-flash") -> VertexAIClient:
     """Get or create Vertex AI client instance"""
     global _vertex_client
     if _vertex_client is None or _vertex_client.model_name != model_name:

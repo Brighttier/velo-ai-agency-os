@@ -17,11 +17,57 @@ from typing import Optional, List, Dict, Any
 # Firestore database
 from database.firestore_db import get_db
 
-# Vertex AI integration
-from integrations.vertex_ai import get_vertex_client
+# Gemini AI integration (replaces Vertex AI)
+from integrations.gemini_ai import get_gemini_client
+
+# Plane.so integration
+from tools.plane_client import PlaneClient
 
 # Load environment variables
 load_dotenv()
+
+# Helper function to get agents for project type
+def get_agents_for_project_type(project_type: str) -> List[Dict[str, str]]:
+    """
+    Get appropriate agent workflow based on project type
+
+    Returns list of agents with their roles for the project
+    """
+    if project_type == 'marketing':
+        return [
+            {"agent": "Nexus", "role": "Strategy & Planning"},
+            {"agent": "Rhythm", "role": "TikTok Content"},
+            {"agent": "Prism", "role": "Instagram Content"},
+            {"agent": "Quill", "role": "Copywriting"},
+            {"agent": "Rocket", "role": "Growth & Optimization"},
+        ]
+    elif project_type == 'design':
+        return [
+            {"agent": "Oracle", "role": "Requirements & Planning"},
+            {"agent": "Aurora", "role": "UI/UX Design"},
+            {"agent": "Pixel", "role": "Frontend Implementation"},
+            {"agent": "Sherlock", "role": "Design QA"},
+        ]
+    elif project_type == 'business':
+        return [
+            {"agent": "Oracle", "role": "Strategy & Analysis"},
+            {"agent": "Neuron", "role": "Data Analysis"},
+            {"agent": "Quill", "role": "Documentation"},
+        ]
+    elif project_type == 'content':
+        return [
+            {"agent": "Oracle", "role": "Content Planning"},
+            {"agent": "Quill", "role": "Content Creation"},
+            {"agent": "Rocket", "role": "Distribution Strategy"},
+        ]
+    else:  # software (default)
+        return [
+            {"agent": "Oracle", "role": "Requirements & Planning"},
+            {"agent": "Neuron", "role": "Architecture"},
+            {"agent": "Atlas", "role": "Implementation"},
+            {"agent": "Judge", "role": "Code Review"},
+            {"agent": "Forge", "role": "Deployment"},
+        ]
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -179,23 +225,23 @@ async def run_planning_phase(project_id: str, project_name: str, description: st
         if step["agent"] == "Oracle" and "Generating" in step["action"]:
             artifact_id = f"art_{uuid.uuid4().hex[:8]}"
 
-            # Generate PRD using Vertex AI
+            # Generate PRD using Gemini AI
             try:
-                vertex_client = get_vertex_client()
-                prd_content = await vertex_client.generate_prd(
+                gemini_client = get_gemini_client()
+                prd_content = await gemini_client.generate_prd(
                     project_name=project_name,
                     project_description=description,
                     user_requirements=description
                 )
             except Exception as e:
-                error_msg = f"Vertex AI PRD generation failed: {str(e)}"
+                error_msg = f"Gemini AI PRD generation failed: {str(e)}"
                 print(f"⚠️ {error_msg}")
 
                 # Broadcast error to frontend
                 await manager.broadcast({
                     "type": "ai_generation_warning",
                     "project_id": project_id,
-                    "message": "AI generation unavailable. Using basic template. Please enable Vertex AI API for full features.",
+                    "message": "AI generation unavailable. Using basic template. Please configure GEMINI_API_KEY for full features.",
                     "details": str(e)[:200],  # Truncate long errors
                     "timestamp": datetime.utcnow().isoformat()
                 })
@@ -251,20 +297,20 @@ This document outlines the requirements and plan for: {project_name}
 
         # If this is the Neuron step, create tasks
         if step["agent"] == "Neuron":
-            # Generate task breakdown using Vertex AI
+            # Generate task breakdown using Gemini AI
             try:
-                vertex_client = get_vertex_client()
+                gemini_client = get_gemini_client()
                 # Get the PRD content from the artifact we just created
                 artifacts_list = db.list_artifacts(project_id)
                 prd_artifact = next((a for a in artifacts_list if a.get("file_type") == "prd"), None)
                 prd_text = prd_artifact.get("content", description) if prd_artifact else description
 
-                sample_tasks = await vertex_client.generate_task_breakdown(
+                sample_tasks = await gemini_client.generate_task_breakdown(
                     prd_content=prd_text,
                     project_name=project_name
                 )
             except Exception as e:
-                error_msg = f"Vertex AI task breakdown failed: {str(e)}"
+                error_msg = f"Gemini AI task breakdown failed: {str(e)}"
                 print(f"⚠️ {error_msg}")
 
                 # Broadcast error to frontend
@@ -428,10 +474,10 @@ async def run_task_execution(task_id: str, project_id: str, task: Dict[str, Any]
     })
     await asyncio.sleep(2)
 
-    # Generate code output using Vertex AI
+    # Generate code output using Gemini AI
     try:
-        vertex_client = get_vertex_client()
-        code_output = await vertex_client.generate_code(
+        gemini_client = get_gemini_client()
+        code_output = await gemini_client.generate_code(
             task_title=task_title,
             task_description=task.get("description", ""),
             agent_name=agent_name.lower(),
@@ -441,7 +487,7 @@ async def run_task_execution(task_id: str, project_id: str, task: Dict[str, Any]
             }
         )
     except Exception as e:
-        error_msg = f"Vertex AI code generation failed: {str(e)}"
+        error_msg = f"Gemini AI code generation failed: {str(e)}"
         print(f"⚠️ {error_msg}")
 
         # Broadcast error to frontend
@@ -607,6 +653,40 @@ async def update_project(project_id: str, request: ProjectUpdateRequest):
     # Return updated project
     updated_project = db.get_project(project_id)
     return updated_project
+
+@app.delete("/api/project/{project_id}")
+async def delete_project(project_id: str):
+    """
+    Delete project and all its related data (tasks, artifacts, etc.)
+    """
+    project = db.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Delete all related tasks
+    tasks_list = db.list_tasks(project_id)
+    for task in tasks_list:
+        db.delete_task(task["id"])
+
+    # Delete all related artifacts
+    artifacts_list = db.list_artifacts(project_id)
+    for artifact in artifacts_list:
+        db.delete_artifact(artifact["id"])
+
+    # Delete the project itself
+    db.delete_project(project_id)
+
+    # Broadcast deletion
+    await manager.broadcast({
+        "type": "project_deleted",
+        "project_id": project_id,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
+    return {
+        "message": "Project and all related data deleted successfully",
+        "project_id": project_id
+    }
 
 @app.post("/api/project/{project_id}/export")
 async def export_project(project_id: str):
@@ -854,30 +934,310 @@ async def get_tenant_usage():
         }
     }
 
-async def check_vertex_ai_health():
-    """Check if Vertex AI is properly configured and accessible"""
+# ==============================================================================
+# PLANE.SO INTEGRATION ENDPOINTS
+# ==============================================================================
+
+# Initialize Plane client (async context manager)
+plane_client = None
+PLANE_WORKSPACE_SLUG = os.getenv("PLANE_WORKSPACE_SLUG", "velo")
+
+async def get_plane_client() -> PlaneClient:
+    """Get or create Plane client"""
+    global plane_client
+    if plane_client is None:
+        try:
+            plane_client = PlaneClient()
+        except ValueError as e:
+            print(f"⚠️  WARNING: Plane client not configured: {e}")
+            return None
+    return plane_client
+
+# Plane Projects
+@app.get("/api/plane/projects")
+async def plane_list_projects():
+    """List all Plane projects"""
+    client = await get_plane_client()
+    if not client:
+        raise HTTPException(status_code=503, detail="Plane integration not configured")
+
+    projects = await client.list_projects(PLANE_WORKSPACE_SLUG)
+    return {"projects": projects}
+
+@app.get("/api/plane/projects/{project_id}")
+async def plane_get_project(project_id: str):
+    """Get Plane project details"""
+    project = plane_client.get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+@app.post("/api/plane/projects")
+async def plane_create_project(request: Dict[str, Any]):
+    """Create new Plane project"""
+    name = request.get("name")
+    description = request.get("description", "")
+    identifier = request.get("identifier")
+
+    if not name:
+        raise HTTPException(status_code=400, detail="Project name is required")
+
+    project = plane_client.create_project(name, description, identifier)
+    if not project:
+        raise HTTPException(status_code=500, detail="Failed to create project")
+
+    return project
+
+@app.patch("/api/plane/projects/{project_id}")
+async def plane_update_project(project_id: str, updates: Dict[str, Any]):
+    """Update Plane project"""
+    project = plane_client.update_project(project_id, updates)
+    if not project:
+        raise HTTPException(status_code=500, detail="Failed to update project")
+    return project
+
+# Plane Issues
+@app.get("/api/plane/projects/{project_id}/issues")
+async def plane_list_issues(project_id: str, state: str = None, priority: str = None):
+    """List issues in Plane project"""
+    filters = {}
+    if state:
+        filters["state"] = state
+    if priority:
+        filters["priority"] = priority
+
+    issues = plane_client.list_issues(project_id, filters)
+    return {"issues": issues}
+
+@app.get("/api/plane/projects/{project_id}/issues/{issue_id}")
+async def plane_get_issue(project_id: str, issue_id: str):
+    """Get Plane issue details"""
+    issue = plane_client.get_issue(project_id, issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return issue
+
+@app.post("/api/plane/projects/{project_id}/issues")
+async def plane_create_issue(project_id: str, request: Dict[str, Any]):
+    """Create new Plane issue"""
+    title = request.get("title")
+    if not title:
+        raise HTTPException(status_code=400, detail="Issue title is required")
+
+    issue = plane_client.create_issue(
+        project_id=project_id,
+        title=title,
+        description=request.get("description", ""),
+        priority=request.get("priority", "medium"),
+        assignee_id=request.get("assignee_id"),
+        state_id=request.get("state_id"),
+        labels=request.get("labels"),
+        start_date=request.get("start_date"),
+        target_date=request.get("target_date")
+    )
+
+    if not issue:
+        raise HTTPException(status_code=500, detail="Failed to create issue")
+
+    return issue
+
+@app.patch("/api/plane/projects/{project_id}/issues/{issue_id}")
+async def plane_update_issue(project_id: str, issue_id: str, updates: Dict[str, Any]):
+    """Update Plane issue"""
+    issue = plane_client.update_issue(project_id, issue_id, updates)
+    if not issue:
+        raise HTTPException(status_code=500, detail="Failed to update issue")
+    return issue
+
+@app.delete("/api/plane/projects/{project_id}/issues/{issue_id}")
+async def plane_delete_issue(project_id: str, issue_id: str):
+    """Delete Plane issue"""
+    success = plane_client.delete_issue(project_id, issue_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete issue")
+    return {"message": "Issue deleted successfully"}
+
+# Plane Cycles
+@app.get("/api/plane/projects/{project_id}/cycles")
+async def plane_list_cycles(project_id: str):
+    """List cycles in Plane project"""
+    cycles = plane_client.list_cycles(project_id)
+    return {"cycles": cycles}
+
+@app.post("/api/plane/projects/{project_id}/cycles")
+async def plane_create_cycle(project_id: str, request: Dict[str, Any]):
+    """Create new Plane cycle"""
+    name = request.get("name")
+    start_date = request.get("start_date")
+    end_date = request.get("end_date")
+
+    if not all([name, start_date, end_date]):
+        raise HTTPException(status_code=400, detail="Name, start_date, and end_date are required")
+
+    cycle = plane_client.create_cycle(
+        project_id=project_id,
+        name=name,
+        start_date=start_date,
+        end_date=end_date,
+        description=request.get("description", "")
+    )
+
+    if not cycle:
+        raise HTTPException(status_code=500, detail="Failed to create cycle")
+
+    return cycle
+
+@app.post("/api/plane/projects/{project_id}/cycles/{cycle_id}/issues")
+async def plane_add_issue_to_cycle(project_id: str, cycle_id: str, request: Dict[str, Any]):
+    """Add issue to cycle"""
+    issue_id = request.get("issue_id")
+    if not issue_id:
+        raise HTTPException(status_code=400, detail="issue_id is required")
+
+    success = plane_client.add_issue_to_cycle(project_id, cycle_id, issue_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to add issue to cycle")
+
+    return {"message": "Issue added to cycle successfully"}
+
+# Plane Modules
+@app.get("/api/plane/projects/{project_id}/modules")
+async def plane_list_modules(project_id: str):
+    """List modules in Plane project"""
+    modules = plane_client.list_modules(project_id)
+    return {"modules": modules}
+
+@app.post("/api/plane/projects/{project_id}/modules")
+async def plane_create_module(project_id: str, request: Dict[str, Any]):
+    """Create new Plane module"""
+    name = request.get("name")
+    if not name:
+        raise HTTPException(status_code=400, detail="Module name is required")
+
+    module = plane_client.create_module(
+        project_id=project_id,
+        name=name,
+        description=request.get("description", ""),
+        start_date=request.get("start_date"),
+        target_date=request.get("target_date")
+    )
+
+    if not module:
+        raise HTTPException(status_code=500, detail="Failed to create module")
+
+    return module
+
+@app.post("/api/plane/projects/{project_id}/modules/{module_id}/issues")
+async def plane_add_issue_to_module(project_id: str, module_id: str, request: Dict[str, Any]):
+    """Add issue to module"""
+    issue_id = request.get("issue_id")
+    if not issue_id:
+        raise HTTPException(status_code=400, detail="issue_id is required")
+
+    success = plane_client.add_issue_to_module(project_id, module_id, issue_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to add issue to module")
+
+    return {"message": "Issue added to module successfully"}
+
+# Plane Pages
+@app.get("/api/plane/projects/{project_id}/pages")
+async def plane_list_pages(project_id: str):
+    """List pages in Plane project"""
+    pages = plane_client.list_pages(project_id)
+    return {"pages": pages}
+
+@app.post("/api/plane/projects/{project_id}/pages")
+async def plane_create_page(project_id: str, request: Dict[str, Any]):
+    """Create new Plane page"""
+    name = request.get("name")
+    if not name:
+        raise HTTPException(status_code=400, detail="Page name is required")
+
+    page = plane_client.create_page(
+        project_id=project_id,
+        name=name,
+        description=request.get("description", "")
+    )
+
+    if not page:
+        raise HTTPException(status_code=500, detail="Failed to create page")
+
+    return page
+
+# Plane States & Labels
+@app.get("/api/plane/projects/{project_id}/states")
+async def plane_list_states(project_id: str):
+    """List workflow states in Plane project"""
+    states = plane_client.list_states(project_id)
+    return {"states": states}
+
+@app.get("/api/plane/projects/{project_id}/labels")
+async def plane_list_labels(project_id: str):
+    """List labels in Plane project"""
+    labels = plane_client.list_labels(project_id)
+    return {"labels": labels}
+
+# Plane Webhooks
+@app.post("/api/plane/webhooks")
+async def plane_webhook_handler(request: Dict[str, Any]):
+    """Handle Plane webhooks"""
+    from fastapi import Request as FastAPIRequest
+    import json
+
+    # Get raw request body and signature
+    # Note: This is a simplified version - in production, you'd get headers from the actual request
+    signature = request.get("signature", "")
+    payload = json.dumps(request.get("payload", {}))
+
+    # Verify signature
+    if not plane_client.verify_webhook_signature(payload, signature):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    event_type = request.get("event")
+    action = request.get("action")
+    data = request.get("data", {})
+
+    # Broadcast webhook event to connected clients
+    await manager.broadcast({
+        "type": "plane_webhook",
+        "event": event_type,
+        "action": action,
+        "data": data,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+
+    # Log webhook event
+    print(f"📨 Plane Webhook: {event_type}.{action}")
+
+    return {"status": "received"}
+
+async def check_gemini_ai_health():
+    """Check if Gemini AI is properly configured and accessible"""
     try:
-        vertex_client = get_vertex_client()
+        gemini_client = get_gemini_client()
         # Try a simple test generation with minimal tokens
-        test_result = await vertex_client.generate_content(
+        test_result = await gemini_client.generate_content(
             prompt="Say 'OK'",
             temperature=0.1,
             max_tokens=10
         )
-        print("✅ Vertex AI is properly configured and accessible")
+        print("✅ Gemini AI is properly configured and accessible")
+        print(f"   Test response: {test_result}")
         return True
     except Exception as e:
-        print("⚠️  WARNING: Vertex AI is not available")
+        print("⚠️  WARNING: Gemini AI is not available")
         print(f"   Error: {str(e)[:150]}")
         print("   → AI-powered content generation will use fallback templates")
-        print("   → Enable Vertex AI API: https://console.developers.google.com/apis/api/aiplatform.googleapis.com/overview?project=velo-479115")
+        print("   → Get API key: https://aistudio.google.com/app/apikey")
+        print("   → Set environment variable: export GEMINI_API_KEY='your-key-here'")
         return False
 
 @app.on_event("startup")
 async def startup_event():
     """Run startup tasks"""
-    print("🔍 Checking Vertex AI configuration...")
-    await check_vertex_ai_health()
+    print("🔍 Checking Gemini AI configuration...")
+    await check_gemini_ai_health()
     print("✅ Velo backend initialized")
 
 if __name__ == "__main__":
