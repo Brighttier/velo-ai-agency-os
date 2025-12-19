@@ -9,10 +9,12 @@ import asyncio
 import json
 from datetime import datetime
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, BackgroundTasks, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+import firebase_admin
+from firebase_admin import auth as firebase_auth
 
 # Firestore database
 from database.firestore_db import get_db
@@ -68,6 +70,85 @@ def get_agents_for_project_type(project_type: str) -> List[Dict[str, str]]:
             {"agent": "Judge", "role": "Code Review"},
             {"agent": "Forge", "role": "Deployment"},
         ]
+
+# ==================== AUTHENTICATION MIDDLEWARE ====================
+
+async def get_current_user(authorization: str = Header(None)):
+    """
+    Extract and validate user from Firebase token
+
+    Returns dict with user_id, email, and tenant_id
+    Raises HTTPException if authentication fails
+    """
+    if not authorization or not authorization.startswith('Bearer '):
+        raise HTTPException(status_code=401, detail="No authorization token provided")
+
+    token = authorization.split('Bearer ')[1]
+
+    try:
+        # Verify Firebase ID token
+        decoded_token = firebase_auth.verify_id_token(token)
+        user_id = decoded_token['uid']
+        email = decoded_token.get('email', '')
+
+        # Get user profile from Firestore to get tenant_id
+        db = get_db()
+        user_profile = db.get_user(user_id)
+
+        if not user_profile:
+            # Create user profile if it doesn't exist
+            user_profile = db.create_user({
+                'uid': user_id,
+                'email': email,
+                'tenant_id': None,  # Will be set when user joins/creates a tenant
+                'role': 'member',
+                'display_name': decoded_token.get('name', email.split('@')[0])
+            })
+
+        return {
+            "uid": user_id,
+            "email": email,
+            "tenant_id": user_profile.get('tenant_id'),
+            "role": user_profile.get('role', 'member'),
+            "display_name": user_profile.get('display_name', email)
+        }
+
+    except firebase_auth.InvalidIdTokenError:
+        raise HTTPException(status_code=401, detail="Invalid authentication token")
+    except firebase_auth.ExpiredIdTokenError:
+        raise HTTPException(status_code=401, detail="Authentication token expired")
+    except Exception as e:
+        print(f"Authentication error: {e}")
+        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+
+
+async def get_optional_user(authorization: str = Header(None)) -> Optional[Dict[str, Any]]:
+    """
+    Optional authentication - returns user if token is valid, None otherwise
+    Use for endpoints that work with or without authentication
+    """
+    if not authorization:
+        return None
+
+    try:
+        return await get_current_user(authorization)
+    except HTTPException:
+        return None
+
+
+def require_tenant(current_user: Dict[str, Any]) -> str:
+    """
+    Ensure user has a tenant_id
+    Raises HTTPException if user is not associated with a tenant
+    """
+    tenant_id = current_user.get('tenant_id')
+    if not tenant_id:
+        raise HTTPException(
+            status_code=403,
+            detail="User must be associated with a workspace. Please create or join a workspace first."
+        )
+    return tenant_id
+
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -904,7 +985,11 @@ function implement() {{
 
 # Project endpoints
 @app.post("/api/project/create")
-async def create_project(request: ProjectCreateRequest, background_tasks: BackgroundTasks):
+async def create_project(
+    request: ProjectCreateRequest,
+    background_tasks: BackgroundTasks,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     """
     Create a new project and initiate the Planning Phase.
     This will:
@@ -914,7 +999,10 @@ async def create_project(request: ProjectCreateRequest, background_tasks: Backgr
 
     Returns immediately with project_id and starts planning in background
     """
-    # Create project in Firestore
+    # Ensure user has a tenant
+    tenant_id = require_tenant(current_user)
+
+    # Create project in Firestore with tenant and creator info
     project_data = {
         "name": request.name,
         "description": request.description,
@@ -922,7 +1010,10 @@ async def create_project(request: ProjectCreateRequest, background_tasks: Backgr
         "progress": 0,
         "agents": 0,
         "total_tasks": 0,
-        "completed_tasks": 0
+        "completed_tasks": 0,
+        "tenant_id": tenant_id,  # Associate project with tenant
+        "created_by": current_user["uid"],  # Track who created it
+        "created_by_name": current_user["display_name"]
     }
 
     created_project = db.create_project(project_data)
@@ -952,10 +1043,13 @@ async def create_project(request: ProjectCreateRequest, background_tasks: Backgr
     }
 
 @app.get("/api/project/list")
-async def list_projects():
-    """Get all projects for the current tenant"""
-    # Get all projects from Firestore (already sorted by created_at DESC)
-    projects_list = db.list_projects()
+async def list_projects(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get all projects for the current tenant (team workspace)"""
+    # Ensure user has a tenant
+    tenant_id = require_tenant(current_user)
+
+    # Get projects filtered by tenant_id (team members see all team projects)
+    projects_list = db.list_projects(tenant_id=tenant_id)
     return {"projects": projects_list}
 
 @app.get("/api/project/{project_id}")
@@ -1231,33 +1325,111 @@ async def add_artifact_comment(artifact_id: str, content: str):
 
 # Tenant endpoints
 @app.post("/api/tenant/create")
-async def create_tenant(request: dict):
+async def create_tenant(
+    request: dict,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     """
-    Create a new tenant account
-    Called during signup process
+    Create a new tenant/workspace and associate the current user with it
+    Called during onboarding or when creating a new workspace
     """
-    # TODO: Verify Firebase token from Authorization header
-    # TODO: Create tenant in database with user_id and company_name
+    company_name = request.get("company_name")
+    if not company_name:
+        raise HTTPException(status_code=400, detail="company_name is required")
 
-    tenant_id = f"tenant_{uuid.uuid4().hex[:12]}"
+    # Create tenant in Firestore
+    tenant_data = {
+        "company_name": company_name,
+        "subdomain": company_name.lower().replace(" ", "-")[:50],
+        "plan_tier": "free",
+        "owner_id": current_user["uid"],
+        "created_by": current_user["uid"]
+    }
+
+    tenant = db.create_tenant(tenant_data)
+    tenant_id = tenant["id"]
+
+    # Associate current user with this tenant
+    db.update_user(current_user["uid"], {
+        "tenant_id": tenant_id,
+        "role": "admin"  # Creator becomes admin
+    })
 
     return {
         "id": tenant_id,
-        "company_name": request.get("company_name"),
-        "user_id": request.get("user_id"),
+        "company_name": company_name,
         "plan_tier": "free",
-        "created_at": datetime.utcnow().isoformat()
+        "created_at": tenant["created_at"],
+        "message": "Workspace created successfully"
     }
 
 @app.get("/api/tenant")
-async def get_tenant():
-    """Get current tenant information"""
-    # TODO: Get from auth context
+async def get_tenant(current_user: Dict[str, Any] = Depends(get_current_user)):
+    """Get current tenant/workspace information"""
+    tenant_id = current_user.get("tenant_id")
+
+    if not tenant_id:
+        return {
+            "tenant": None,
+            "message": "User not associated with any workspace"
+        }
+
+    tenant = db.get_tenant(tenant_id)
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+
+    # Get team members
+    team_members = db.list_tenant_users(tenant_id)
+
     return {
-        "id": "tenant_123",
-        "company_name": "Bright Tier Solutions",
-        "plan_tier": "enterprise"
+        "tenant": tenant,
+        "team_members": team_members,
+        "current_user_role": current_user.get("role")
     }
+
+@app.post("/api/tenant/invite")
+async def invite_user_to_tenant(
+    request: dict,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Invite a user to join the tenant workspace
+    Admin only
+    """
+    # Ensure user has admin role
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Only admins can invite users")
+
+    tenant_id = require_tenant(current_user)
+    email = request.get("email")
+
+    if not email:
+        raise HTTPException(status_code=400, detail="email is required")
+
+    # Check if user exists in the system
+    invited_user = db.get_user_by_email(email)
+
+    if invited_user:
+        # User exists - update their tenant_id
+        if invited_user.get("tenant_id"):
+            raise HTTPException(status_code=400, detail="User already belongs to a workspace")
+
+        db.update_user(invited_user["uid"], {
+            "tenant_id": tenant_id,
+            "role": "member"
+        })
+
+        return {
+            "message": f"User {email} added to workspace",
+            "user": invited_user
+        }
+    else:
+        # User doesn't exist yet - they'll be added when they sign up
+        # In a real app, you'd send an email invitation here
+        return {
+            "message": f"Invitation sent to {email}",
+            "pending": True
+        }
 
 @app.get("/api/tenant/usage")
 async def get_tenant_usage():

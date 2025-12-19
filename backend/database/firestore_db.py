@@ -174,6 +174,76 @@ class FirestoreDB:
             .stream()
         return [doc.to_dict() for doc in docs]
 
+    # ==================== TENANT OPERATIONS ====================
+
+    def create_tenant(self, tenant_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new tenant (company/workspace)"""
+        tenant_ref = self.db.collection('tenants').document()
+
+        now = datetime.utcnow().isoformat()
+        tenant_data.setdefault('created_at', now)
+        tenant_data.setdefault('updated_at', now)
+        tenant_data['id'] = tenant_ref.id
+
+        tenant_ref.set(tenant_data)
+        return tenant_data
+
+    def get_tenant(self, tenant_id: str) -> Optional[Dict[str, Any]]:
+        """Get tenant by ID"""
+        doc = self.db.collection('tenants').document(tenant_id).get()
+        if doc.exists:
+            return doc.to_dict()
+        return None
+
+    def update_tenant(self, tenant_id: str, updates: Dict[str, Any]) -> None:
+        """Update tenant fields"""
+        updates['updated_at'] = datetime.utcnow().isoformat()
+        self.db.collection('tenants').document(tenant_id).update(updates)
+
+    # ==================== USER OPERATIONS ====================
+
+    def create_user(self, user_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create or update user profile"""
+        # Use Firebase UID as document ID for easy lookup
+        user_id = user_data.get('uid')
+        if not user_id:
+            raise ValueError("User data must include 'uid' field")
+
+        user_ref = self.db.collection('users').document(user_id)
+
+        now = datetime.utcnow().isoformat()
+        user_data.setdefault('created_at', now)
+        user_data['updated_at'] = now
+
+        user_ref.set(user_data, merge=True)  # Merge to update existing users
+        return user_data
+
+    def get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by Firebase UID"""
+        doc = self.db.collection('users').document(user_id).get()
+        if doc.exists:
+            return doc.to_dict()
+        return None
+
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user by email address"""
+        docs = self.db.collection('users').where('email', '==', email).limit(1).stream()
+        users = [doc.to_dict() for doc in docs]
+        return users[0] if users else None
+
+    def list_tenant_users(self, tenant_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """List all users in a tenant"""
+        docs = self.db.collection('users') \
+            .where('tenant_id', '==', tenant_id) \
+            .limit(limit) \
+            .stream()
+        return [doc.to_dict() for doc in docs]
+
+    def update_user(self, user_id: str, updates: Dict[str, Any]) -> None:
+        """Update user fields"""
+        updates['updated_at'] = datetime.utcnow().isoformat()
+        self.db.collection('users').document(user_id).update(updates)
+
 
 # Global instance
 _db_instance = None
